@@ -1,0 +1,114 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jpsma"
+version = "0.0.1"
+requires-python = ">=3.10"
+authors = [
+    { name = "Jakob Dexl", email = "jakob.dexl@lmu.de" },
+]
+
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scikit-learn",
+    "scikit-image",
+    "notebook>=7.4.3",
+    "nibabel",
+    "connected-components-3d",
+    "torch",
+    "tensorboard",
+    "torchvision",
+    "pytorch-lightning",
+    "pandas",
+    "tqdm",
+    "scikit-learn",
+    "simpleitk>=2.5.2",
+    "monai",
+]
+
+description = "Package and DOCKER for DEEP-PSMA25 challenge"
+readme = {file = "README.md", content-type = "text/markdown"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "ruff",
+    "black"
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]  # Adjust to your Python version
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    #"notebooks/",
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Same as Black.
+line-length = 120
+indent-width = 4
+
+# Assume Python 3.8
+target-version = "py311"
+
+[lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+select = ["E4", "E7", "E9", "F"]
+ignore = []
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+"*.ipynb" = ["E402", "F821", "E731", "F841", "F811"]
