@@ -5,14 +5,18 @@ from pytorch_lightning.loggers import TensorBoardLogger
 import os
 from jpsma.model import NNUnet
 from pytorch_lightning import Trainer
+
 # %%
 fold = 0
-root_dir = "/data2/core-rad/data/deep-psma-preprocessed-bothways/"
+root_dir = ""
 case_ids = sorted(os.listdir(root_dir))
+
 # %%
-datamodule = PETDataModule(root_dir=root_dir, case_ids=case_ids, use_ct=False, batch_size=2, fold=2, crop_size=(256, 128, 128))
+datamodule = PETDataModule(
+    root_dir=root_dir, case_ids=case_ids, use_ct=False, batch_size=2, fold=0, crop_size=(256, 128, 128)
+)
 model = NNUnet()
-logger = TensorBoardLogger(save_dir="logs", name="f2_fin")
+logger = TensorBoardLogger(save_dir="logs", name="Fold0")
 checkpoint_cb = ModelCheckpoint(monitor="val/loss", mode="min", filename="{epoch:02d}-{val/loss:.4f}")
 print("Starting training")
 trainer = Trainer(

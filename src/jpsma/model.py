@@ -1,14 +1,15 @@
 import pytorch_lightning as pl
 import torch
 from monai.inferers import sliding_window_inference
-from monai.losses import DiceLoss, DiceCELoss
+from monai.losses import DiceCELoss
 from monai.metrics import DiceMetric
 from monai.networks.nets import DynUNet
-from typing import Iterable, Tuple
 from torchmetrics import Metric
+
 
 class FPFN(Metric):
     """Counts False Positives (FP) and False Negatives (FN) for binary classification."""
+
     full_state_update = False
 
     def __init__(self, threshold: float = 0.5):
@@ -67,8 +68,8 @@ class NNUnet(pl.LightningModule):
         if self.deep_supervision:
             loss, weights = 0.0, 0.0
             for i in range(prediction.shape[1]):
-                loss += self.loss_fn(prediction[:, i], label) * 0.5 ** i
-                weights += 0.5 ** i
+                loss += self.loss_fn(prediction[:, i], label) * 0.5**i
+                weights += 0.5**i
             return loss / weights
         return self.loss_fn(prediction, label)
 
@@ -86,17 +87,23 @@ class NNUnet(pl.LightningModule):
         )
 
     def training_step(self, batch, batch_idx):
-        volume = torch.cat([
-            batch["FDG_PET"][:, None, ...],
-            batch["FDG_TOTSEG"][:, None, ...],
-            batch["PSMA_PET"][:, None, ...],
-            batch["PSMA_TOTSEG"][:, None, ...],
-        ], dim=1)
+        volume = torch.cat(
+            [
+                batch["FDG_PET"][:, None, ...],
+                batch["FDG_TOTSEG"][:, None, ...],
+                batch["PSMA_PET"][:, None, ...],
+                batch["PSMA_TOTSEG"][:, None, ...],
+            ],
+            dim=1,
+        )
 
-        label = torch.cat([
-            batch["FDG_TTB"][:, None, ...],
-            batch["PSMA_TTB"][:, None, ...],
-        ], dim=1)
+        label = torch.cat(
+            [
+                batch["FDG_TTB"][:, None, ...],
+                batch["PSMA_TTB"][:, None, ...],
+            ],
+            dim=1,
+        )
 
         logits = self.backbone(volume)
         loss = self.compute_loss(logits, label)
@@ -104,32 +111,38 @@ class NNUnet(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        volume = torch.cat([
-            batch["FDG_PET"][:, None, ...],
-            batch["FDG_TOTSEG"][:, None, ...],
-            batch["PSMA_PET"][:, None, ...],
-            batch["PSMA_TOTSEG"][:, None, ...],
-        ], dim=1)
+        volume = torch.cat(
+            [
+                batch["FDG_PET"][:, None, ...],
+                batch["FDG_TOTSEG"][:, None, ...],
+                batch["PSMA_PET"][:, None, ...],
+                batch["PSMA_TOTSEG"][:, None, ...],
+            ],
+            dim=1,
+        )
 
-        label = torch.cat([
-            batch["FDG_TTB"][:, None, ...],
-            batch["PSMA_TTB"][:, None, ...],
-        ], dim=1)
+        label = torch.cat(
+            [
+                batch["FDG_TTB"][:, None, ...],
+                batch["PSMA_TTB"][:, None, ...],
+            ],
+            dim=1,
+        )
 
         logits = self.forward(volume)  # [1, 2, D, H, W]
 
         # PET-intensity masks
-        fdg_mask = (batch["FDG_PET"][:, None, ...] >= 0)
-        psma_mask = (batch["PSMA_PET"][:, None, ...] >= 0)
+        fdg_mask = batch["FDG_PET"][:, None, ...] >= 0
+        psma_mask = batch["PSMA_PET"][:, None, ...] >= 0
         mask = torch.cat([fdg_mask, psma_mask], dim=1)
-
 
         loss = self.loss_fn(logits, label)
         prediction = torch.ge(torch.sigmoid(logits), 0.5)
         prediction = prediction * mask.float()
 
+        # case_id = str(batch["case_id"][0])
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, sync_dist=True, batch_size=1)
-        case_id = str(batch["case_id"][0])
+
         self.dice_fdg(y_pred=prediction[:, 0:1, ...], y=label[:, 0:1, ...])
         self.dice_psma(y_pred=prediction[:, 1:2, ...], y=label[:, 1:2, ...])
 
@@ -160,14 +173,3 @@ class NNUnet(pl.LightningModule):
         optimizer = torch.optim.Adam(self.backbone.parameters(), lr=self.learning_rate, weight_decay=1e-5)
         scheduler = torch.optim.lr_scheduler.PolynomialLR(optimizer, total_iters=self.trainer.max_epochs, power=0.9)
         return [optimizer], [scheduler]
-
-    def sliding_window_inference(self, image):
-        return sliding_window_inference(
-            inputs=image,
-            roi_size=self.patch_size,
-            sw_batch_size=self.sw_batch_size,
-            predictor=self.backbone,
-            overlap=self.sw_overlap,
-            mode=self.sw_mode,
-        )
-
